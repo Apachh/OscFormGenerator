@@ -52,7 +52,8 @@ long int sequence[MAX_NUM_POINTS] = {0};
 long int max = 0;
 long int min = 0;
 
-int genExponent(unsigned pNum, long int z0, long int z1);
+unsigned genExponent(unsigned pNum, long int z0, long int z1);
+unsigned genMeander(long int z0, long int z1);
 
 template<typename T>
 T restrictInt(int64_t in) {
@@ -91,6 +92,8 @@ static inline T rounding(T x) {
 }
 
 int main() {
+    std::memset(sequence, 0, sizeof(sequence));
+    
     if(std::filesystem::exists(OUT_FILENAME)) {
         std::filesystem::remove(OUT_FILENAME);
     }
@@ -99,14 +102,17 @@ int main() {
     }
 
     sys.open(SYS_FILENAME, std::ios::in);
-
+    
     // if(!sys.is_open()) {
     //     std::cerr << "Error open to sysfile:" << SYS_FILENAME << endl;
     //     return 1;
     // }
+
     string command = "echo $GTK_PATH > ";
     command.append(SYS_FILENAME);
     system(command.c_str());
+
+    sys.close();
 
     gp = popen("gnuplot -", "w");
 
@@ -133,13 +139,12 @@ int main() {
     unsigned nPoints = 0;
     if(outFile.is_open()) {
         switch(formType) {
-            case MEANDER: break;
+            case MEANDER:  nPoints = genMeander(max, min); break;
             case SIN: break;
-            case EXPONENT: 
-                nPoints = genExponent(24, max, min);
-                break;
+            case EXPONENT: nPoints = genExponent(24, max, min); break;
             default: break;
         }
+        outFile.close();
     } else {
         std::cerr << "Error, closed" << endl;
         std::cerr << "Impossible to open file " << OUT_FILENAME << endl;
@@ -159,9 +164,9 @@ int main() {
     }
     cout << sequence[i] << " }" << endl;
 
-    system("ls -a");
     
     fprintf(gp, "set xrange [-2: %d]\n", nPoints);
+    fprintf(gp, "set yrange [%ld: %ld]\n", long(-std::abs(min) * 1.5f), long(std::abs(max) * 1.5f));
     fprintf(gp, "set arrow 1 from -50 to 50 nohead lc rgb \"black\" lw 1\n");
     fprintf(gp, "plot './");
     fprintf(gp, OUT_FILENAME);
@@ -172,7 +177,7 @@ int main() {
     return 0;
 }
 
-int genExponent(unsigned pNum,  long int z0, long int z1) {
+unsigned genExponent(unsigned pNum, long int z0, long int z1) {
     float y = 0.0f;
     float x = 0.0f;
     float k = 1.0f;
@@ -192,7 +197,21 @@ int genExponent(unsigned pNum,  long int z0, long int z1) {
         x = x * !(i == pMean);
         i++;
     }
-    outFile.close();
     
     return pNum;
+}
+
+unsigned genMeander(long int z0, long int z1) {
+    const int MEANDER_PATTERN_SIZE = 4;
+
+    unsigned pMean = MEANDER_PATTERN_SIZE / 2;
+    unsigned i = 0;
+    while (i < MEANDER_PATTERN_SIZE) {
+        sequence[i] = (i < pMean) ? std::abs(z0) : -std::abs(z1);
+        outFile << ((i < pMean) ? i : (i - 1)) << " " << sequence[i] << endl;
+        i++;
+    }
+    outFile << (i - 2) << " " << 0 << endl;
+
+    return MEANDER_PATTERN_SIZE;
 }
