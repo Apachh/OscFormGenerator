@@ -110,7 +110,7 @@ int main() {
     if(outFile.is_open()) {
         switch(formType) {
             case MEANDER:  nPoints = genMeander(max, min); break;
-            case SIN: break;
+            case SIN:      nPoints = genSin(24, max, min); break;
             case EXPONENT: nPoints = genExponent(24, max, min); break;
             default: break;
         }
@@ -155,13 +155,12 @@ int main() {
     float x = 0.0f;
     while(i < nPoints) {    
         outFile << x << " " << sequence[i] << endl;
-        cout << x << " " << sequence[i] << endl;
+        cout << i << ": " << x << " " << sequence[i] << endl;
         x += (i < median) ? (!(i == (median - 1)) * pStep) : (nStep * !(i == (nPoints - 1)));
         i++;
     }
     outFile << x << " " << 0 << endl;
     outFile.close();
-    cout << "i = " << i << endl;
 
     fprintf(gp, "set xrange [-2: %d]\n", FULL_X_PART + 2);
     fprintf(gp, "set yrange [%ld: %ld]\n", long(-std::abs(min) * 1.5f), long(std::abs(max) * 1.5f));
@@ -186,9 +185,9 @@ unsigned genExponent(unsigned pNum, long int z0, long int z1) {
 
     unsigned i = 0;
     while(i < pNum) {
-        y = 1.0f / std::exp(k * x);
-        sequence[i] = (i <= pMean)  ? (std::abs(z0) * y) : (-std::abs(z1) * y);
         x += step;
+        y = 1.0f / std::exp(k * x);
+        sequence[i] = (i <= pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
         x = x * !(i == pMean);
         i++;
     }
@@ -205,6 +204,24 @@ unsigned genMeander(long int z0, long int z1) {
         i++;
     }
     return MEANDER_PATTERN_SIZE;
+}
+
+unsigned genSin(unsigned pNum, long int z0, long int z1) {
+    static const unsigned PERIOD_PI_RAD = 2;
+    float y = 0.0f;
+    float x = 0.0f;
+    unsigned pMean = (pNum / 2);
+    float step = float(PERIOD_PI_RAD) / pNum;
+
+    unsigned i = 0;
+    while(i < pNum) {
+        y = sin(PI * x);
+        sequence[i] = y * ((i <= pMean) ? std::abs(z0) : std::abs(z1));
+        x += step;
+        i++;
+    }
+
+    return pNum;
 }
 
 template<int X, int Y>
