@@ -37,6 +37,10 @@ const char* FORMS[] = {
 };
 
 static const unsigned MAX_NUM_POINTS = 100;
+static const unsigned X_AXIS = 0;
+static const unsigned Y_AXIS = 1;
+static const unsigned Z_AXIS = 2;
+static const unsigned AXIS_CNT = 2;
 static const unsigned FULL_X_PART = 10;
 static const double PI = M_PI;
 static const float ZERO = 0.001f;
@@ -48,14 +52,18 @@ std::fstream sys;
 std::fstream outFile;
 
 int formType = NONE;
-long int sequence[MAX_NUM_POINTS] = {0};
+char I_E[] = "1:1\n";
+long int sequence[AXIS_CNT][MAX_NUM_POINTS];
 
 long int max = 0;
 long int min = 0;
 
+void introMessages();
+
 unsigned genExponent(unsigned pNum, long int z0, long int z1);
 unsigned genMeander(long int z0, long int z1);
 unsigned genSin(unsigned pNum, long int z0, long int z1);
+unsigned getDualLevelMeander(long int z0, long int z1);
 
 template<typename T, long long GRADE>
 static inline T rounding(T x);
@@ -89,29 +97,16 @@ int main() {
     outFile.open(OUT_FILENAME, std::ios::out);
     outFile << 0 << " " << 0 << endl;
 
-    unsigned formCnt = sizeof(FORMS) / sizeof(FORMS[0]);
-    unsigned i = 0;
-    while(i < formCnt) {
-        cout << (i + 1) <<". " << FORMS[i] << endl;
-        i++;
-    }
-    cout << "Choose the form for pattern: ";
-    cin >> formType;
-    if((formType > formCnt) || (formType == 0))
-        cout << "Choosed wrong number:" << formType << endl << "Excepted :" << "{1, " << formCnt << "}" << endl;
-    cout << "Choosed: " << FORMS[formType - 1] << endl;
-    cout << "Insert max value: ";
-    cin >> max;
-    cout << "Insert min value: ";
-    cin >> min;
-    cout << "Choosed range: {" << -std::abs(min) << ", " << std::abs(max) << "}" << endl;
+    introMessages();
 
     unsigned nPoints = 0;
     if(outFile.is_open()) {
         switch(formType) {
-            case MEANDER:  nPoints = genMeander(max, min); break;
-            case SIN:      nPoints = genSin(24, max, min); break;
-            case EXPONENT: nPoints = genExponent(24, max, min); break;
+            case MEANDER:                          nPoints = genMeander(max, min); break;
+            case SIN:                              nPoints = genSin(24, max, min); break;
+            case EXPONENT:                         nPoints = genExponent(24, max, min); break;
+            case DUAL_LEVEL_MEANDER:               nPoints = getDualLevelMeander(max, min); break;
+            case DUAL_LEVEL_MEANDER_WITH_EXPONENT: 
             default: break;
         }
     } else {
@@ -151,12 +146,14 @@ int main() {
     float pStep = float(Ipart) / median;
     float nStep = float(Epart) / median;
     
+    bool isCont = !(formType == SIN);
     i = 0;
     float x = 0.0f;
     while(i < nPoints) {    
         outFile << x << " " << sequence[i] << endl;
         cout << i << ": " << x << " " << sequence[i] << endl;
         x += (i < median) ? (!(i == (median - 1)) * pStep) : (nStep * !(i == (nPoints - 1)));
+        x += (i < median) ? (!((i == (median - 1)) && isCont) * pStep) : (!((i == (nPoints - 1)) && isCont) * nStep);
         i++;
     }
     outFile << x << " " << 0 << endl;
@@ -174,6 +171,38 @@ int main() {
     return 0;
 }
 
+void introMessages() {
+    unsigned formCnt = sizeof(FORMS) / sizeof(FORMS[0]);
+    unsigned i = 0;
+    while(i < formCnt) {
+        cout << (i + 1) <<". " << FORMS[i] << endl;
+        i++;
+    }
+    cout << "Choose the form for pattern: ";
+    cin >> formType;
+    if((formType > formCnt) || (formType == 0))
+        cout << "Choosed wrong number:" << formType << endl << "Excepted :" << "{1, " << formCnt << "}" << endl;
+    cout << "Choosed: " << FORMS[formType - 1] << endl;
+
+    cout << "Insert max value: ";
+    cin >> max;
+    cout << "Insert min value: ";
+    cin >> min;
+    cout << "Choosed range: {" << -std::abs(min) << ", " << std::abs(max) << "}" << endl;
+
+    cout << "Insert I:E (Format like: 1:2): ";
+    cin.get();
+    cin.getline(I_E, sizeof(I_E));
+
+    cout << "Choosed I:E: " << I_E << endl;
+
+    Ipart = unsigned(I_E[0]) - 48;
+    Epart = unsigned(I_E[2]) - 48;
+    unsigned part = FULL_X_PART / (Ipart + Epart);
+    Ipart *= part;
+    Epart *= part;
+}
+
 unsigned genExponent(unsigned pNum, long int z0, long int z1) {
     float y = 0.0f;
     float x = 0.0f;
@@ -182,12 +211,14 @@ unsigned genExponent(unsigned pNum, long int z0, long int z1) {
     float x_max = rounding<float, 2>((std::log(1.0f / ZERO)) / k);
     float step = x_max / (float(pNum) / 2.0f);
     unsigned pMean = (pNum / 2) - 1;
+    unsigned pMean = (pNum / 2);
 
     unsigned i = 0;
     while(i < pNum) {
         x += step;
         y = 1.0f / std::exp(k * x);
         sequence[i] = (i <= pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
+        sequence[Y_AXIS][i] = (i < pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
         x = x * !(i == pMean);
         i++;
     }
@@ -222,6 +253,32 @@ unsigned genSin(unsigned pNum, long int z0, long int z1) {
     }
 
     return pNum;
+}
+
+unsigned getDualLevelMeander(long int z0, long int z1) {
+    // const int MEANDER_PATTERN_SIZE = 8;
+    long int hlvl = 0;
+    long int llvl = 0;
+
+    cout << "Insert second high level: ";
+    cin >> hlvl;
+    cout << "Insert second low level: ";
+    cin >> llvl;
+
+    //TODO Попозже сделать нормально)
+    unsigned i = 0;
+
+    sequence[i++] = std::abs(z0);
+    sequence[i++] = std::abs(z0);
+    sequence[i++] = std::abs(hlvl);
+    sequence[i++] = std::abs(hlvl);
+
+    sequence[i++] = -std::abs(z1);
+    sequence[i++] = -std::abs(z1);
+    sequence[i++] = -std::abs(llvl);
+    sequence[i++] = -std::abs(llvl);
+
+    return i;
 }
 
 template<int X, int Y>
