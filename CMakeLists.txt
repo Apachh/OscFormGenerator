@@ -25,5 +25,6 @@ target_sources(${PROJECT_NAME} PRIVATE ${SOURCE_FILES})
 
 # Добавляем пути до заголовочных файлов
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
