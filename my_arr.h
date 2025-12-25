@@ -69,20 +69,44 @@ namespace tpl {
     void getSizes(unsigned* arr, TUPLE& tuple) {
         Sizer_t<TUPLE, 0 == getCount<TUPLE>(), getCount<TUPLE>()>::getSizes(arr, tuple);
     }
+
+    template<unsigned I, typename T>
+    struct TupleElement_t;
+
+    template<unsigned I, typename Head, typename... Tail>
+    struct TupleElement_t<I, Tuple_t<Head, Tail...>> : TupleElement_t<I - 1, Tuple_t<Tail...>> {};
+
+    template<typename Head, typename... Tail>
+    struct TupleElement_t<0, Tuple_t<Head, Tail...>> {
+        using Type = Head;
+    };
+
+    // template<typename Type>
+    // union Universal_t {
+    //     Type _type;
+        
+    // };
+
+
 }
 
 namespace arr {
     template<int SIZE, typename T0, typename... T>
     class Array_t {
         public:
-        constexpr Array_t() { memset(data, 0, sizeof(data)); }
+        Array_t() { 
+            unsigned sizes[COUNT];
+            memset(this, 0, sizeof(*this));
+            memset(sizes, 0, sizeof(sizes));
+            tpl::getSizes(sizes, data[0]);
+
+            unsigned i = 0;
+            while (++i < COUNT)
+                SHIFTS[i] = sizes[i - 1] + SHIFTS[i - 1];
+        }
 
         int getCount() {
             return COUNT;
-        }
-
-        unsigned long getPiece() {
-            return PIECE;
         }
 
         template<int I>
@@ -90,18 +114,23 @@ namespace arr {
             return tpl::get<I>(data[i]);
         }
 
+        unsigned getMemberShifts(unsigned i) {
+            return SHIFTS[i];
+        }
+
+        template<typename Tr>
+        Tr& get(int i0, int i1) {
+            void* nnptr = static_cast<void*>(&data[i0]);
+            return *static_cast<Tr*>((nnptr + SHIFTS[i1]));
+        }
+
         private:
         
-        union {
-            tpl::Tuple_t<T0, T...> data[SIZE];
-            void* ptr;
-        };
+        tpl::Tuple_t<T0, T...> data[SIZE];
 
         static constexpr int COUNT = sizeof...(T) + 1;
-        const unsigned long PIECE = sizeof(data[0]);
 
-        // template<typename Tr>
-        // constexpr void 
+        static unsigned SHIFTS[COUNT];
     };
 }
 
