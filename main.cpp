@@ -14,6 +14,8 @@
 #include <fstream>
 #include <filesystem>
 
+#include "my_arr.h"
+
 using std::cout;
 using std::cin;
 using std::endl;
@@ -68,7 +70,12 @@ unsigned getDualLevelMeander(long int z0, long int z1);
 template<typename T, long long GRADE>
 static inline T rounding(T x);
 
+void test();
+
 int main() {
+
+    test();
+
     std::memset(sequence, 0, sizeof(sequence));
     
     if(std::filesystem::exists(OUT_FILENAME)) {
@@ -121,7 +128,7 @@ int main() {
     }
 
     cout << "Pattern points: { ";
-    i = 0;
+    unsigned i = 0;
     while(i < (nPoints - 1)) {
         cout << sequence[i] << ", ";
         i++;
@@ -196,8 +203,8 @@ void introMessages() {
 
     cout << "Choosed I:E: " << I_E << endl;
 
-    Ipart = unsigned(I_E[0]) - 48;
-    Epart = unsigned(I_E[2]) - 48;
+    unsigned Ipart = unsigned(I_E[0]) - 48;
+    unsigned Epart = unsigned(I_E[2]) - 48;
     unsigned part = FULL_X_PART / (Ipart + Epart);
     Ipart *= part;
     Epart *= part;
@@ -210,14 +217,12 @@ unsigned genExponent(unsigned pNum, long int z0, long int z1) {
 
     float x_max = rounding<float, 2>((std::log(1.0f / ZERO)) / k);
     float step = x_max / (float(pNum) / 2.0f);
-    unsigned pMean = (pNum / 2) - 1;
     unsigned pMean = (pNum / 2);
 
     unsigned i = 0;
     while(i < pNum) {
         x += step;
         y = 1.0f / std::exp(k * x);
-        sequence[i] = (i <= pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
         sequence[Y_AXIS][i] = (i < pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
         x = x * !(i == pMean);
         i++;
@@ -231,7 +236,7 @@ unsigned genMeander(long int z0, long int z1) {
     unsigned pMean = MEANDER_PATTERN_SIZE / 2;
     unsigned i = 0;
     while (i < MEANDER_PATTERN_SIZE) {
-        sequence[i] = (i < pMean) ? std::abs(z0) : -std::abs(z1);
+        sequence[Y_AXIS][i] = (i < pMean) ? std::abs(z0) : -std::abs(z1);
         i++;
     }
     return MEANDER_PATTERN_SIZE;
@@ -247,7 +252,7 @@ unsigned genSin(unsigned pNum, long int z0, long int z1) {
     unsigned i = 0;
     while(i < pNum) {
         y = sin(PI * x);
-        sequence[i] = y * ((i <= pMean) ? std::abs(z0) : std::abs(z1));
+        sequence[Y_AXIS][i] = y * ((i <= pMean) ? std::abs(z0) : std::abs(z1));
         x += step;
         i++;
     }
@@ -268,15 +273,15 @@ unsigned getDualLevelMeander(long int z0, long int z1) {
     //TODO Попозже сделать нормально)
     unsigned i = 0;
 
-    sequence[i++] = std::abs(z0);
-    sequence[i++] = std::abs(z0);
-    sequence[i++] = std::abs(hlvl);
-    sequence[i++] = std::abs(hlvl);
+    sequence[Y_AXIS][i++] = std::abs(z0);
+    sequence[Y_AXIS][i++] = std::abs(z0);
+    sequence[Y_AXIS][i++] = std::abs(hlvl);
+    sequence[Y_AXIS][i++] = std::abs(hlvl);
 
-    sequence[i++] = -std::abs(z1);
-    sequence[i++] = -std::abs(z1);
-    sequence[i++] = -std::abs(llvl);
-    sequence[i++] = -std::abs(llvl);
+    sequence[Y_AXIS][i++] = -std::abs(z1);
+    sequence[Y_AXIS][i++] = -std::abs(z1);
+    sequence[Y_AXIS][i++] = -std::abs(llvl);
+    sequence[Y_AXIS][i++] = -std::abs(llvl);
 
     return i;
 }
@@ -316,3 +321,42 @@ static inline T rounding(T x) {
         return restrictInt<T>(buf);
     }
 }
+
+#include <tuple>
+void test() {
+
+    tpl::Tuple_t<int, float, char, double, char> tuple;
+    std::tuple<int, float, char, double, char> ttupl;
+    
+    typedef typename tpl::Tuple_t<int, float, char, float> Tuple_type;
+    arr::Array_t<10, int, char, float> arr;
+
+    cout << tpl::get<0>(tuple) << endl;
+    cout << tpl::get<1>(tuple) << endl;
+    cout << tpl::get<2>(tuple) << endl;
+
+    tpl::get<0>(tuple) = 10;
+    cout << tpl::get<0>(tuple) << endl;
+
+    cout << arr.getCount() << endl;
+
+    cout << tpl::getCount<Tuple_type>() << endl;
+
+    arr.get<0>(1);
+
+    cout << "Member Sizes: " << endl;
+    cout << arr.getMemberShifts(0) << endl;
+    cout << arr.getMemberShifts(1) << endl;
+    cout << arr.getMemberShifts(2) << endl;
+
+    cout << "NEW getter: " << endl;
+    cout << arr.get<int>(1, 0) << endl;
+    arr.get<int>(1, 0) = 123;
+    cout << arr.get<int>(1, 0) << endl;
+
+    sizeof(tuple);
+    sizeof(ttupl);
+    sizeof(arr);
+
+    while (true);
+};
