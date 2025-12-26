@@ -55,7 +55,10 @@ std::fstream outFile;
 
 int formType = NONE;
 char I_E[] = "1:1\n";
-long int sequence[AXIS_CNT][MAX_NUM_POINTS];
+unsigned Ipart = 0;
+unsigned Epart = 0;
+
+arr::Array_t<MAX_NUM_POINTS, float, long int> sequence;
 
 long int max = 0;
 long int min = 0;
@@ -74,9 +77,9 @@ void test();
 
 int main() {
 
-    test();
+    // test();
 
-    std::memset(sequence, 0, sizeof(sequence));
+    std::memset(&sequence, 0, sizeof(sequence));
     
     if(std::filesystem::exists(OUT_FILENAME)) {
         std::filesystem::remove(OUT_FILENAME);
@@ -130,10 +133,10 @@ int main() {
     cout << "Pattern points: { ";
     unsigned i = 0;
     while(i < (nPoints - 1)) {
-        cout << sequence[i] << ", ";
+        cout << sequence.get<Y_AXIS>(i) << ", ";
         i++;
     }
-    cout << sequence[i] << " }" << endl;
+    cout << sequence.get<Y_AXIS>(i) << " }" << endl;
     
     char I_E[] = "1:1\n";
     
@@ -157,9 +160,8 @@ int main() {
     i = 0;
     float x = 0.0f;
     while(i < nPoints) {    
-        outFile << x << " " << sequence[i] << endl;
-        cout << i << ": " << x << " " << sequence[i] << endl;
-        x += (i < median) ? (!(i == (median - 1)) * pStep) : (nStep * !(i == (nPoints - 1)));
+        outFile << x << " " << sequence.get<Y_AXIS>(i) << endl;
+        cout << i << ": " << x << " " << sequence.get<Y_AXIS>(i) << endl;
         x += (i < median) ? (!((i == (median - 1)) && isCont) * pStep) : (!((i == (nPoints - 1)) && isCont) * nStep);
         i++;
     }
@@ -197,17 +199,17 @@ void introMessages() {
     cin >> min;
     cout << "Choosed range: {" << -std::abs(min) << ", " << std::abs(max) << "}" << endl;
 
-    cout << "Insert I:E (Format like: 1:2): ";
-    cin.get();
-    cin.getline(I_E, sizeof(I_E));
+    // cout << "Insert I:E (Format like: 1:2): ";
+    // cin.get();
+    // cin.getline(I_E, sizeof(I_E));
 
-    cout << "Choosed I:E: " << I_E << endl;
+    // cout << "Choosed I:E: " << I_E << endl;
 
-    unsigned Ipart = unsigned(I_E[0]) - 48;
-    unsigned Epart = unsigned(I_E[2]) - 48;
-    unsigned part = FULL_X_PART / (Ipart + Epart);
-    Ipart *= part;
-    Epart *= part;
+    // Ipart = unsigned(I_E[0]) - 48;
+    // Epart = unsigned(I_E[2]) - 48;
+    // unsigned part = FULL_X_PART / (Ipart + Epart);
+    // Ipart *= part;
+    // Epart *= part;
 }
 
 unsigned genExponent(unsigned pNum, long int z0, long int z1) {
@@ -221,10 +223,10 @@ unsigned genExponent(unsigned pNum, long int z0, long int z1) {
 
     unsigned i = 0;
     while(i < pNum) {
-        x += step;
-        y = 1.0f / std::exp(k * x);
-        sequence[Y_AXIS][i] = (i < pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
         x = x * !(i == pMean);
+        y = 1.0f / std::exp(k * x);
+        x += step;
+        sequence.get<Y_AXIS>(i) = (i < pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
         i++;
     }
     
@@ -236,7 +238,7 @@ unsigned genMeander(long int z0, long int z1) {
     unsigned pMean = MEANDER_PATTERN_SIZE / 2;
     unsigned i = 0;
     while (i < MEANDER_PATTERN_SIZE) {
-        sequence[Y_AXIS][i] = (i < pMean) ? std::abs(z0) : -std::abs(z1);
+        sequence.get<Y_AXIS>(i) = (i < pMean) ? std::abs(z0) : -std::abs(z1);
         i++;
     }
     return MEANDER_PATTERN_SIZE;
@@ -252,13 +254,14 @@ unsigned genSin(unsigned pNum, long int z0, long int z1) {
     unsigned i = 0;
     while(i < pNum) {
         y = sin(PI * x);
-        sequence[Y_AXIS][i] = y * ((i <= pMean) ? std::abs(z0) : std::abs(z1));
+        sequence.get<Y_AXIS>(i) = y * ((i <= pMean) ? std::abs(z0) : std::abs(z1));
         x += step;
         i++;
     }
 
     return pNum;
 }
+
 
 unsigned getDualLevelMeander(long int z0, long int z1) {
     // const int MEANDER_PATTERN_SIZE = 8;
@@ -273,15 +276,16 @@ unsigned getDualLevelMeander(long int z0, long int z1) {
     //TODO Попозже сделать нормально)
     unsigned i = 0;
 
-    sequence[Y_AXIS][i++] = std::abs(z0);
-    sequence[Y_AXIS][i++] = std::abs(z0);
-    sequence[Y_AXIS][i++] = std::abs(hlvl);
-    sequence[Y_AXIS][i++] = std::abs(hlvl);
+    
+    sequence.get<Y_AXIS>(i++) = std::abs(z0);
+    sequence.get<Y_AXIS>(i++) = std::abs(z0);
+    sequence.get<Y_AXIS>(i++) = std::abs(hlvl);
+    sequence.get<Y_AXIS>(i++) = std::abs(hlvl);
 
-    sequence[Y_AXIS][i++] = -std::abs(z1);
-    sequence[Y_AXIS][i++] = -std::abs(z1);
-    sequence[Y_AXIS][i++] = -std::abs(llvl);
-    sequence[Y_AXIS][i++] = -std::abs(llvl);
+    sequence.get<Y_AXIS>(i++) = -std::abs(z1);
+    sequence.get<Y_AXIS>(i++) = -std::abs(z1);
+    sequence.get<Y_AXIS>(i++) = -std::abs(llvl);
+    sequence.get<Y_AXIS>(i++) = -std::abs(llvl);
 
     return i;
 }
@@ -344,15 +348,15 @@ void test() {
 
     arr.get<0>(1);
 
-    cout << "Member Sizes: " << endl;
-    cout << arr.getMemberShifts(0) << endl;
-    cout << arr.getMemberShifts(1) << endl;
-    cout << arr.getMemberShifts(2) << endl;
+    // cout << "Member Sizes: " << endl;
+    // cout << arr.getMemberShifts(0) << endl;
+    // cout << arr.getMemberShifts(1) << endl;
+    // cout << arr.getMemberShifts(2) << endl;
 
-    cout << "NEW getter: " << endl;
-    cout << arr.get<int>(1, 0) << endl;
-    arr.get<int>(1, 0) = 123;
-    cout << arr.get<int>(1, 0) << endl;
+    // cout << "NEW getter: " << endl;
+    // cout << arr.get<int>(1, 0) << endl;
+    // arr.get<int>(1, 0) = 123;
+    // cout << arr.get<int>(1, 0) << endl;
 
     sizeof(tuple);
     sizeof(ttupl);

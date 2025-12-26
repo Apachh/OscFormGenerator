@@ -100,9 +100,9 @@ namespace arr {
             memset(sizes, 0, sizeof(sizes));
             tpl::getSizes(sizes, data[0]);
 
-            unsigned i = 0;
-            while (++i < COUNT)
-                SHIFTS[i] = sizes[i - 1] + SHIFTS[i - 1];
+            // unsigned i = 0;
+            // while (++i < COUNT)
+            //     SHIFTS[i] = sizes[i - 1] + SHIFTS[i - 1];
         }
 
         int getCount() {
@@ -110,19 +110,19 @@ namespace arr {
         }
 
         template<int I>
-        auto get(int i) {
+        auto& get(int i) {
             return tpl::get<I>(data[i]);
         }
 
-        unsigned getMemberShifts(unsigned i) {
-            return SHIFTS[i];
-        }
+        // unsigned getMemberShifts(unsigned i) {
+        //     return SHIFTS[i];
+        // }
 
-        template<typename Tr>
-        Tr& get(int i0, int i1) {
-            void* nnptr = static_cast<void*>(&data[i0]);
-            return *static_cast<Tr*>((nnptr + SHIFTS[i1]));
-        }
+        // template<typename Tr>
+        // Tr& get(int i0, int i1) {
+        //     void* nnptr = static_cast<void*>(&data[i0]);
+        //     return *static_cast<Tr*>((nnptr + SHIFTS[i1]));
+        // }
 
         private:
         
@@ -130,7 +130,7 @@ namespace arr {
 
         static constexpr int COUNT = sizeof...(T) + 1;
 
-        static unsigned SHIFTS[COUNT];
+        // unsigned SHIFTS[COUNT];
     };
 }
 
