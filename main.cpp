@@ -25,6 +25,11 @@ enum FORM_TYPES {
     DUAL_LEVEL_MEANDER_WITH_EXPONENT
 };
 
+struct Steps_t {
+    float pStep = 0.0f;
+    float nStep = 0.0f;
+};
+
 const char* FORMS[] = {
     "MEANDER",
     "SIN",
@@ -49,9 +54,6 @@ std::fstream sys;
 std::fstream outFile;
 
 int formType = NONE;
-char I_E[] = "1:1\n";
-unsigned Ipart = 0;
-unsigned Epart = 0;
 
 arr::Array_t<MAX_NUM_POINTS, float, long int> sequence;
 
@@ -59,6 +61,8 @@ long int max = 0;
 long int min = 0;
 
 void introMessages();
+
+Steps_t calcIEsteps(unsigned pMean);
 
 unsigned genExponent(unsigned pNum, long int z0, long int z1);
 unsigned genMeander(long int z0, long int z1);
@@ -132,35 +136,16 @@ int main() {
         i++;
     }
     cout << sequence.get<Y_AXIS>(i) << " }" << endl;
-    
-    char I_E[] = "1:1\n";
-    
-    cout << "Insert I:E (Format like: 1:2): ";
-    cin.get();
-    cin.getline(I_E, sizeof(I_E));
 
-    cout << "Choosed I:E: " << I_E << endl;
-
-    unsigned Ipart = unsigned(I_E[0]) - 48;
-    unsigned Epart = unsigned(I_E[2]) - 48;
-    unsigned part = FULL_X_PART / (Ipart + Epart);
-    Ipart *= part;
-    Epart *= part;
-
-    unsigned median = nPoints / 2;
-    float pStep = float(Ipart) / median;
-    float nStep = float(Epart) / median;
-    
     bool isCont = !(formType == SIN);
     i = 0;
     float x = 0.0f;
-    while(i < nPoints) {    
-        outFile << x << " " << sequence.get<Y_AXIS>(i) << endl;
-        cout << i << ": " << x << " " << sequence.get<Y_AXIS>(i) << endl;
-        x += (i < median) ? (!((i == (median - 1)) && isCont) * pStep) : (!((i == (nPoints - 1)) && isCont) * nStep);
+    while(i < (nPoints + 1)) {    
+        outFile << sequence.get<X_AXIS>(i) << " " << sequence.get<Y_AXIS>(i) << endl;
+        cout << i << ": " << sequence.get<X_AXIS>(i) << " " << sequence.get<Y_AXIS>(i) << endl;
         i++;
     }
-    outFile << x << " " << 0 << endl;
+    
     outFile.close();
 
     fprintf(gp, "set xrange [-2: %d]\n", FULL_X_PART + 2);
@@ -193,28 +178,41 @@ void introMessages() {
     cout << "Insert min value: ";
     cin >> min;
     cout << "Choosed range: {" << -std::abs(min) << ", " << std::abs(max) << "}" << endl;
+}
 
-    // cout << "Insert I:E (Format like: 1:2): ";
-    // cin.get();
-    // cin.getline(I_E, sizeof(I_E));
+Steps_t calcIEsteps(unsigned pMean) {
+    char I_E[] = "1:1\n";
+    Steps_t output = {0, 0};
 
-    // cout << "Choosed I:E: " << I_E << endl;
+    cout << "Insert I:E (Format like: 1:2): ";
+    cin.get();
+    cin.getline(I_E, sizeof(I_E));
+    cout << "Choosed I:E: " << I_E << endl;
+    
+    unsigned Ipart = unsigned(I_E[0]) - 48;
+    unsigned Epart = unsigned(I_E[2]) - 48;
+    unsigned part = FULL_X_PART / (Ipart + Epart);
+    Ipart *= part;
+    Epart *= part;
 
-    // Ipart = unsigned(I_E[0]) - 48;
-    // Epart = unsigned(I_E[2]) - 48;
-    // unsigned part = FULL_X_PART / (Ipart + Epart);
-    // Ipart *= part;
-    // Epart *= part;
+    output.pStep = float(Ipart) / pMean;
+    output.nStep = float(Epart) / pMean;
+
+    return output;
 }
 
 unsigned genExponent(unsigned pNum, long int z0, long int z1) {
     float y = 0.0f;
     float x = 0.0f;
     float k = 1.0f;
+    float xr = 0.0f;
 
     float x_max = rounding<float, 2>((std::log(1.0f / ZERO)) / k);
     float step = x_max / (float(pNum) / 2.0f);
     unsigned pMean = (pNum / 2);
+
+    Steps_t sp = {0, 0};
+    sp = calcIEsteps(pMean);
 
     unsigned i = 0;
     while(i < pNum) {
@@ -222,44 +220,67 @@ unsigned genExponent(unsigned pNum, long int z0, long int z1) {
         y = 1.0f / std::exp(k * x);
         x += step;
         sequence.get<Y_AXIS>(i) = (i < pMean) ? (std::abs(z0) * y) : (-std::abs(z1) * y);
+        sequence.get<X_AXIS>(i) = xr;
+        xr += (i < pMean) ? !(i == (pMean - 1)) * sp.pStep : 
+              !(i == (pNum - 1)) * sp.nStep;
         i++;
     }
+    sequence.get<X_AXIS>(i) = xr;
     
     return pNum;
 }
 
 unsigned genMeander(long int z0, long int z1) {
-    const int MEANDER_PATTERN_SIZE = 4;
-    unsigned pMean = MEANDER_PATTERN_SIZE / 2;
+    const int PATTERN_SIZE = 4;
+    unsigned pMean = PATTERN_SIZE / 2;
+    float xr = 0.0f;
+
+    Steps_t sp = {0, 0};
+    sp = calcIEsteps(pMean);
+
     unsigned i = 0;
-    while (i < MEANDER_PATTERN_SIZE) {
+    while (i < PATTERN_SIZE) {
         sequence.get<Y_AXIS>(i) = (i < pMean) ? std::abs(z0) : -std::abs(z1);
+        sequence.get<X_AXIS>(i) = xr;
+        xr += (i < pMean) ? !(i == (pMean - 1)) * sp.pStep : 
+              !(i == (PATTERN_SIZE - 1)) * sp.nStep;
         i++;
     }
-    return MEANDER_PATTERN_SIZE;
+    sequence.get<X_AXIS>(i) = xr;
+
+    return PATTERN_SIZE;
 }
 
 unsigned genSin(unsigned pNum, long int z0, long int z1) {
     static const unsigned PERIOD_PI_RAD = 2;
     float y = 0.0f;
     float x = 0.0f;
+    float xr = 0.0f;
     unsigned pMean = (pNum / 2);
     float step = float(PERIOD_PI_RAD) / pNum;
+
+    Steps_t sp = {0, 0};
+    sp = calcIEsteps(pMean);
 
     unsigned i = 0;
     while(i < pNum) {
         y = sin(PI * x);
         sequence.get<Y_AXIS>(i) = y * ((i <= pMean) ? std::abs(z0) : std::abs(z1));
+        sequence.get<X_AXIS>(i) = xr;
+        xr += (i < pMean) ? sp.pStep : sp.nStep;
         x += step;
         i++;
     }
+    x += step;
+    sequence.get<X_AXIS>(i) = xr;
 
     return pNum;
 }
 
 
 unsigned getDualLevelMeander(long int z0, long int z1) {
-    // const int MEANDER_PATTERN_SIZE = 8;
+    const int PATTERN_SIZE = 8;
+    float xr = 0.0f;
     long int hlvl = 0;
     long int llvl = 0;
 
@@ -268,19 +289,22 @@ unsigned getDualLevelMeander(long int z0, long int z1) {
     cout << "Insert second low level: ";
     cin >> llvl;
 
-    //TODO Попозже сделать нормально)
-    unsigned i = 0;
+    unsigned pMean = (PATTERN_SIZE / 2);
 
+    Steps_t sp = {0, 0};
+    sp = calcIEsteps(pMean);
+
+    const long int SEQ[PATTERN_SIZE / 2] = {std::abs(z0), std::abs(hlvl), 
+                                            -std::abs(z1), -std::abs(llvl)};
     
-    sequence.get<Y_AXIS>(i++) = std::abs(z0);
-    sequence.get<Y_AXIS>(i++) = std::abs(z0);
-    sequence.get<Y_AXIS>(i++) = std::abs(hlvl);
-    sequence.get<Y_AXIS>(i++) = std::abs(hlvl);
-
-    sequence.get<Y_AXIS>(i++) = -std::abs(z1);
-    sequence.get<Y_AXIS>(i++) = -std::abs(z1);
-    sequence.get<Y_AXIS>(i++) = -std::abs(llvl);
-    sequence.get<Y_AXIS>(i++) = -std::abs(llvl);
+    unsigned i = 0;
+    while (i < PATTERN_SIZE) {
+        sequence.get<Y_AXIS>(i) = SEQ[i / 2];
+        sequence.get<X_AXIS>(i) = xr;
+        xr += (i < pMean) ? !(i % 2) * sp.pStep : !(i % 2) * sp.nStep;
+        i++;
+    }
+    sequence.get<X_AXIS>(i) = xr;
 
     return i;
 }
