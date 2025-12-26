@@ -46,6 +46,7 @@ static const unsigned AXIS_CNT = 2;
 static const unsigned FULL_X_PART = 10;
 static const double PI = M_PI;
 static const float ZERO = 0.001f;
+// static const float ZERO = 0.5f;
 static const char* OUT_FILENAME = "output.dat";
 static const char* SYS_FILENAME = "gtk_var.txt";
 
@@ -68,6 +69,7 @@ unsigned genExponent(unsigned pNum, long int z0, long int z1);
 unsigned genMeander(long int z0, long int z1);
 unsigned genSin(unsigned pNum, long int z0, long int z1);
 unsigned getDualLevelMeander(long int z0, long int z1);
+unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1);
 
 template<typename T, long long GRADE>
 static inline T rounding(T x);
@@ -277,7 +279,6 @@ unsigned genSin(unsigned pNum, long int z0, long int z1) {
     return pNum;
 }
 
-
 unsigned getDualLevelMeander(long int z0, long int z1) {
     const int PATTERN_SIZE = 8;
     float xr = 0.0f;
@@ -306,7 +307,42 @@ unsigned getDualLevelMeander(long int z0, long int z1) {
     }
     sequence.get<X_AXIS>(i) = xr;
 
-    return i;
+    return PATTERN_SIZE;
+}
+
+
+//см график y = a + (a / exp(x))
+unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
+    float y = 0.0f;
+    float x = 0.0f;
+    float k = 1.0f;
+    float xr = 0.0f;
+
+    long int hlvl = 0;
+    long int llvl = 0;
+
+    cout << "Insert second high level: ";
+    cin >> hlvl;
+    cout << "Insert second low level: ";
+    cin >> llvl;
+
+    unsigned pMean = pNum / 2;
+    unsigned pQuart = pMean / 2;
+
+    Steps_t sp0 = {0, 0};
+    sp0 = calcIEsteps(pMean);
+    
+    cout << "Now insert I:E for second h and l level." << endl;
+    Steps_t sp1 = {0, 0};
+    sp1 = calcIEsteps(pQuart);
+
+    unsigned i = 0;
+    while (i < pMean) {
+        y = 1.0f / std::exp(k * x);
+    }
+
+
+    return 0;
 }
 
 template<int X, int Y>
