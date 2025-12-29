@@ -346,7 +346,7 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
         sequence.get<Y_AXIS>(i) = std::abs(z0) * y;
         sequence.get<X_AXIS>(i) = xr;
 
-        xr += !(i == (pMean - 1)) * sp0.pStep;
+        xr += (i < pQuart) ? sp0.pStep : !(i == (pMean - 1)) * sp0.nStep;
 
         i++;
     }
