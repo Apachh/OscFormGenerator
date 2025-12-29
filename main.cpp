@@ -117,7 +117,7 @@ int main() {
             case SIN:                              nPoints = genSin(24, max, min); break;
             case EXPONENT:                         nPoints = genExponent(24, max, min); break;
             case DUAL_LEVEL_MEANDER:               nPoints = getDualLevelMeander(max, min); break;
-            case DUAL_LEVEL_MEANDER_WITH_EXPONENT: 
+            case DUAL_LEVEL_MEANDER_WITH_EXPONENT: nPoints = getDualLevelMeanderWithExp(32, max, min); break;
             default: break;
         }
     } else {
@@ -183,11 +183,10 @@ void introMessages() {
 }
 
 Steps_t calcIEsteps(unsigned pMean) {
-    char I_E[] = "1:1\n";
+    char I_E[] = "1:1";
     Steps_t output = {0, 0};
 
     cout << "Insert I:E (Format like: 1:2): ";
-    cin.get();
     cin.getline(I_E, sizeof(I_E));
     cout << "Choosed I:E: " << I_E << endl;
     
@@ -315,7 +314,6 @@ unsigned getDualLevelMeander(long int z0, long int z1) {
 unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
     float y = 0.0f;
     float x = 0.0f;
-    float k = 1.0f;
     float xr = 0.0f;
 
     long int hlvl = 0;
@@ -325,6 +323,7 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
     cin >> hlvl;
     cout << "Insert second low level: ";
     cin >> llvl;
+    cin.get();
 
     unsigned pMean = pNum / 2;
     unsigned pQuart = pMean / 2;
@@ -336,13 +335,40 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
     Steps_t sp1 = {0, 0};
     sp1 = calcIEsteps(pQuart);
 
+    float y_min = rounding<float, 2>(float(hlvl) / z0);
+    float x_max = rounding<float, 2>(log((1.0f - y_min) / ZERO));
+    float xstep = x_max / float(pQuart);
+
     unsigned i = 0;
     while (i < pMean) {
-        y = 1.0f / std::exp(k * x);
+        y = y_min + (1.0f - y_min) / std::exp(x);
+        x += xstep;
+        sequence.get<Y_AXIS>(i) = std::abs(z0) * y;
+        sequence.get<X_AXIS>(i) = xr;
+
+        xr += !(i == (pMean - 1)) * sp0.pStep;
+
+        i++;
     }
 
+    y_min = rounding<float, 2>(float(llvl) / z1);
+    x_max = rounding<float, 2>(log((1.0f - y_min) / ZERO));
+    xstep = x_max / float(pQuart);
 
-    return 0;
+    x = 0;
+    while (i < pNum) {
+        y = y_min + (1.0f - y_min) / std::exp(x);
+        x += xstep;
+        sequence.get<Y_AXIS>(i) = -std::abs(z1) * y;
+        sequence.get<X_AXIS>(i) = xr;
+
+        xr += !(i == (pNum - 1)) * sp0.nStep;
+
+        i++;
+    }
+    sequence.get<X_AXIS>(i) = xr;
+
+    return pNum;
 }
 
 template<int X, int Y>
@@ -368,7 +394,7 @@ T restrictInt(int64_t in) {
 template<typename T, long long GRADE>
 static inline T rounding(T x) {
     static constexpr long long DECADE = static_cast<int32_t>(constexpr_int_pow<10, GRADE>());
-    cout << "DECADE = " << DECADE << endl;
+    // cout << "DECADE = " << DECADE << endl;
     if constexpr (std::is_floating_point<T>::value) {
         static constexpr double PROBE_NUM = 1.0 / DECADE / 2.0;
         int64_t buf = (x + PROBE_NUM) * DECADE;
