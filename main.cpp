@@ -49,6 +49,7 @@ static const float ZERO = 0.001f;
 // static const float ZERO = 0.5f;
 static const char* OUT_FILENAME = "output.dat";
 static const char* SYS_FILENAME = "gtk_var.txt";
+static const char* OUT_FILENAME = "out/output.dat";
 
 FILE* gp;
 std::fstream sys;
