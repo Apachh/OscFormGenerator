@@ -332,9 +332,9 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
     Steps_t sp0 = {0, 0};
     sp0 = calcIEsteps(pMean);
     
-    cout << "Now insert I:E for second h and l level." << endl;
-    Steps_t sp1 = {0, 0};
-    sp1 = calcIEsteps(pQuart);
+    // cout << "Now insert I:E for second h and l level." << endl;
+    // Steps_t sp1 = {0, 0};
+    // sp1 = calcIEsteps(pQuart);
 
     float y_min = rounding<float, 2>(float(hlvl) / z0);
     float x_max = rounding<float, 2>(log((1.0f - y_min) / ZERO));
@@ -347,7 +347,8 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
         sequence.get<Y_AXIS>(i) = std::abs(z0) * y;
         sequence.get<X_AXIS>(i) = xr;
 
-        xr += (i < pQuart) ? sp0.pStep : !(i == (pMean - 1)) * sp0.nStep;
+        // xr += (i < pQuart) ? sp0.pStep : !(i == (pMean - 1)) * sp0.nStep;
+        xr += !(i == (pMean - 1)) * sp0.pStep;
 
         i++;
     }
