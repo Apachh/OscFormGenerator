@@ -47,11 +47,11 @@ static const unsigned FULL_X_PART = 10;
 static const double PI = M_PI;
 static const float ZERO = 0.001f;
 // static const float ZERO = 0.5f;
-static const char* OUT_FILENAME = "output.dat";
-static const char* SYS_FILENAME = "gtk_var.txt";
 static const char* OUT_FILENAME = "out/output.dat";
+// static const char* SYS_FILENAME = "gtk_var.txt";
 
 FILE* gp;
+FILE* bash;
 std::fstream sys;
 std::fstream outFile;
 
@@ -99,10 +99,13 @@ int main() {
     // system(command.c_str());
 
     // if(!std::filesystem::is_empty(SYS_FILENAME))
-        system("unset GTK_PATH");
+        // system("unset GTK_PATH");
     
     // sys.close();
     // std::filesystem::remove(SYS_FILENAME);
+    // bash = popen("bash", "w");
+    // fprintf(bash, "unset GTK_PATH");
+    // fflush(bash);
 
     gp = popen("gnuplot -", "w");
 
@@ -158,6 +161,7 @@ int main() {
     fprintf(gp, OUT_FILENAME);
     fprintf(gp, "' with lines \n");
     fflush(gp);
+    // pclose(gp);
     while (true);
     
     return 0;
