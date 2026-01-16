@@ -8,6 +8,9 @@
 #include <limits>
 #include <fstream>
 #include <filesystem>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "my_arr.h"
 
@@ -30,6 +33,11 @@ struct Steps_t {
     float nStep = 0.0f;
 };
 
+struct Parts_t {
+    unsigned Ipart = 0;
+    unsigned Epart = 0;
+};
+
 const char* FORMS[] = {
     "MEANDER",
     "SIN",
@@ -46,8 +54,8 @@ static const unsigned AXIS_CNT = 2;
 static const unsigned FULL_X_PART = 10;
 static const double PI = M_PI;
 static const float ZERO = 0.001f;
-// static const float ZERO = 0.5f;
-static const char* OUT_FILENAME = "out/output.dat";
+static const char* OUT_FILENAME = "output.dat";
+static const char* OUT_DIRECTORY = "out";
 // static const char* SYS_FILENAME = "gtk_var.txt";
 
 FILE* gp;
@@ -65,6 +73,7 @@ long int min = 0;
 void introMessages();
 
 Steps_t calcIEsteps(unsigned pMean);
+Parts_t getIEparts(unsigned pcount);
 
 unsigned genExponent(unsigned pNum, long int z0, long int z1);
 unsigned genMeander(long int z0, long int z1);
@@ -82,7 +91,10 @@ int main() {
     // test();
 
     std::memset(&sequence, 0, sizeof(sequence));
-    
+
+    mkdir(OUT_DIRECTORY,0777);
+    chdir(OUT_DIRECTORY);
+
     if(std::filesystem::exists(OUT_FILENAME)) {
         std::filesystem::remove(OUT_FILENAME);
     }
@@ -106,6 +118,19 @@ int main() {
     // bash = popen("bash", "w");
     // fprintf(bash, "unset GTK_PATH");
     // fflush(bash);
+    
+    // char* workDirPath = getcwd(NULL, 0);
+    // unsigned sizePath = 0;
+    // if(workDirPath != NULL) {
+    //     char check = *workDirPath;
+    //     unsigned i = 1;
+    //     while (check != '\0') {
+    //         check = *(workDirPath + i);
+    //         i++;
+    //     }
+    //     sizePath = i;
+    // }
+    // free(workDirPath);
 
     gp = popen("gnuplot -", "w");
 
@@ -185,24 +210,34 @@ void introMessages() {
     cout << "Insert min value: ";
     cin >> min;
     cout << "Choosed range: {" << -std::abs(min) << ", " << std::abs(max) << "}" << endl;
+
+    cin.get();
+}
+
+Parts_t getIEparts(unsigned pcount) {
+    char I_E[] = "1:1";
+    Parts_t output = {0, 0};
+    cout << "Insert I:E (Format like: 1:2): ";
+    cin.getline(I_E, sizeof(I_E));
+    cout << "Choosed I:E: " << I_E << endl; 
+
+    output.Ipart = unsigned(I_E[0]) - 48;
+    output.Epart = unsigned(I_E[2]) - 48;
+    float part = float(pcount) / (output.Ipart + output.Epart);
+    output.Ipart *= part;
+    output.Epart *= part;
+
+    return output;
 }
 
 Steps_t calcIEsteps(unsigned pMean) {
-    char I_E[] = "1:1";
     Steps_t output = {0, 0};
+    Parts_t parts = {0, 0};
 
-    cout << "Insert I:E (Format like: 1:2): ";
-    cin.getline(I_E, sizeof(I_E));
-    cout << "Choosed I:E: " << I_E << endl;
-    
-    unsigned Ipart = unsigned(I_E[0]) - 48;
-    unsigned Epart = unsigned(I_E[2]) - 48;
-    unsigned part = FULL_X_PART / (Ipart + Epart);
-    Ipart *= part;
-    Epart *= part;
+    parts = getIEparts(FULL_X_PART);
 
-    output.pStep = float(Ipart) / pMean;
-    output.nStep = float(Epart) / pMean;
+    output.pStep = float(parts.Ipart) / pMean;
+    output.nStep = float(parts.Epart) / pMean;
 
     return output;
 }
@@ -293,6 +328,7 @@ unsigned getDualLevelMeander(long int z0, long int z1) {
     cin >> hlvl;
     cout << "Insert second low level: ";
     cin >> llvl;
+    cin.get();
 
     unsigned pMean = (PATTERN_SIZE / 2);
 
@@ -336,13 +372,12 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
     Steps_t sp0 = {0, 0};
     sp0 = calcIEsteps(pMean);
     
-    // cout << "Now insert I:E for second h and l level." << endl;
-    // Steps_t sp1 = {0, 0};
-    // sp1 = calcIEsteps(pQuart);
+    cout << "Now insert I:E for second h and l level." << endl;
 
+    Parts_t sparts = getIEparts(pMean);
     float y_min = rounding<float, 2>(float(hlvl) / z0);
     float x_max = rounding<float, 2>(log((1.0f - y_min) / ZERO));
-    float xstep = x_max / float(pQuart);
+    float xstep = x_max / float(sparts.Ipart);
 
     unsigned i = 0;
     while (i < pMean) {
@@ -350,8 +385,6 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
         x += xstep;
         sequence.get<Y_AXIS>(i) = std::abs(z0) * y;
         sequence.get<X_AXIS>(i) = xr;
-
-        // xr += (i < pQuart) ? sp0.pStep : !(i == (pMean - 1)) * sp0.nStep;
         xr += !(i == (pMean - 1)) * sp0.pStep;
 
         i++;
@@ -359,7 +392,7 @@ unsigned getDualLevelMeanderWithExp(unsigned pNum, long int z0, long int z1) {
 
     y_min = rounding<float, 2>(float(llvl) / z1);
     x_max = rounding<float, 2>(log((1.0f - y_min) / ZERO));
-    xstep = x_max / float(pQuart);
+    xstep = x_max / float(sparts.Ipart);
 
     x = 0;
     while (i < pNum) {
